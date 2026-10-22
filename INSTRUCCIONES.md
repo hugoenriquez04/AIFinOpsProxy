@@ -121,7 +121,7 @@ The response includes a `usage` object with `prompt_tokens` and `completion_toke
 
 ## What to Build
 
-See [`CHALLENGE.es.md`](CHALLENGE.es.md) for the full spec, scoring rubric, and acceptance criteria.
+See [`CHALLENGE.md`](CHALLENGE.md) for the full spec, scoring rubric, and acceptance criteria.
 
 In short: build a proxy layer that sits in front of these two providers and adds:
 

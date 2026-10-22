@@ -59,7 +59,7 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print("✅ Base de datos inicializada")
+    print("✅ Database initialized")
 
 def insertar_consumidores_prueba():
     conn = sqlite3.connect(DB_NAME)
@@ -77,7 +77,7 @@ def insertar_consumidores_prueba():
 
     conn.commit()
     conn.close()
-    print("✅ Consumidores de prueba insertados.")
+    print("✅ Test consumers inserted.")
 
 def get_consumer(name):
     conn = sqlite3.connect(DB_NAME)
@@ -118,7 +118,7 @@ def log_usage(consumer_name, requested_model, provider_model, prompt_tokens, com
 
     conn.commit()
     conn.close()
-    print(f"💰 Log guardado: {consumer_name} gastó ${cost:.6f} en {provider_model} (Ahorro: ${savings:.6f})")
+    print(f"💰 Log saved: {consumer_name} spent ${cost:.6f} on {provider_model} (Savings: ${savings:.6f})")
 
 def log_alert(consumer_name, message):
     conn = sqlite3.connect(DB_NAME)
@@ -129,7 +129,7 @@ def log_alert(consumer_name, message):
                    ''', (consumer_name, message))
     conn.commit()
     conn.close()
-    print(f"🚨 [BD ALERTA] Alerta guardada para {consumer_name}: {message}")
+    print(f"🚨 [DB ALERT] Alert saved for {consumer_name}: {message}")
 
 def _generar_hash(texto):
     return hashlib.md5(texto.lower().strip().encode('utf-8')).hexdigest()
@@ -150,7 +150,7 @@ def buscar_en_cache(prompt):
     conn.close()
 
     if resultado:
-        print(f"⚡ Devolviendo respuesta guardada en caché (Ahorro histórico exacto: ${resultado[2]:.6f})")
+        print(f"⚡ Returning cached response (exact historical savings: ${resultado[2]:.6f})")
         return {"respuesta": resultado[0], "modelo": resultado[1], "coste_original": resultado[2]}
     return None
 

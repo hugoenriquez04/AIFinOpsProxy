@@ -1,67 +1,55 @@
-# AI FinOps Proxy — EigenMinds
+# AI FinOps Proxy - EigenMinds
 
-Bienvenido al repositorio central de nuestro proxy de FinOps para IA. 
-Este proyecto intercepta llamadas a modelos de IA, calcula sus costes, aplica límites de presupuesto y enruta dinámicamente las peticiones para optimizar el gasto.
+AI FinOps Proxy is an OpenAI-compatible gateway that intercepts AI requests,
+tracks token usage and cost, enforces per-consumer budgets, and routes requests
+to the most appropriate local model.
 
-## 🚀 Modelos y Costes de Referencia
+## Architecture
 
-Trabajamos con dos modelos locales servidos mediante Ollama, simulando dos proveedores distintos con diferentes capacidades y precios:
+- **Core proxy:** FastAPI endpoint in `app/main.py` and `app/api/routes.py`.
+- **Cost tracking:** SQLite storage in `app/db/database.py`.
+- **AI routing:** Complexity- and budget-aware routing in `app/core/router.py`.
+- **Dashboard:** Streamlit reporting application in `dashboard/app.py`.
 
-| Proveedor | Modelo | URL Base | Coste Entrada (1M) | Coste Salida (1M) |
-| :--- | :--- | :--- | :--- | :--- |
-| **A (Rápido/Barato)** | `llama3.2:3b` | `http://localhost:11434/v1` | $0.06 | $0.06 |
-| **B (Lento/Caro)** | `mistral:7b` | `http://localhost:11435/v1` | $0.24 | $0.24 |
+The default setup uses two Ollama providers:
 
----
+| Provider | Model | Base URL | Input / output cost per 1M tokens |
+| --- | --- | --- | --- |
+| A (fast / low cost) | `llama3.2:3b` | `http://localhost:11434/v1` | $0.06 / $0.06 |
+| B (slower / higher quality) | `mistral:7b` | `http://localhost:11435/v1` | $0.24 / $0.24 |
 
-## 👥 Reparto del Equipo y Tareas
+## Getting started
 
-Para avanzar en paralelo y evitar conflictos de código, el trabajo se divide en 4 módulos independientes con sus respectivas carpetas:
+1. Create a virtual environment:
+   `python -m venv venv`
+2. Activate it (`venv\Scripts\activate` on Windows).
+3. Install dependencies:
+   `pip install -r requirements.txt`
+4. Start the services:
+   `docker compose up --build`
 
-### 🛡️ 1. El Guardián (Core Proxy) -> Asignado a: Juan Manuel Díaz Guardia
-**Objetivo:** Crear la puerta de entrada de todas las peticiones (el interceptor).
-* **Stack:** Python + FastAPI.
-* **Archivos:** `app/main.py` y `app/api/routes.py`
-* **Tareas:**
-  * Configurar la app de FastAPI en `main.py`.
-  * Crear el endpoint POST en `/v1/chat/completions` dentro de `routes.py`.
-  * Extraer el identificador del consumidor desde los headers (ej. `X-Consumer-ID`).
-  * Interceptar la llamada llamando a la BD antes de procesar para verificar saldo.
-  * Llamar al Enrutador para obtener la respuesta de la IA y devolver el JSON de OpenAI.
+The proxy listens on port `8000`; the dashboard listens on port `8501`.
 
-### 📊 2. El Contable (Base de Datos) -> Asignado a: Javier Campos Córcoles
-**Objetivo:** Persistir presupuestos, consumidores y registrar cada céntimo gastado.
-* **Stack:** Python + SQLite.
-* **Archivo:** `app/db/database.py`
-* **Tareas:**
-  * Configurar la conexión a `finops.db`.
-  * Definir la inicialización de las tablas SQLite (`consumers` y `logs`).
-  * Programar funciones: `check_budget(consumer_id)`, `update_spend(...)` y `log_request(...)`.
+Every request must include an `X-Consumer-ID` header. Example:
 
-### 🧠 3. El Cerebro (Enrutamiento IA) -> Asignado a: Hugo Enriquez Jimenez
-**Objetivo:** Decidir qué modelo usar en cada momento y conectarse a Ollama.
-* **Stack:** Python + `httpx`.
-* **Archivo:** `app/core/router.py`
-* **Tareas:**
-  * Guardar URLs base y precios de referencia como constantes.
-  * Implementar la lógica de enrutamiento (Criterio de Complejidad y Criterio FinOps).
-  * Usar `httpx.AsyncClient()` para conectarse de forma asíncrona a los contenedores locales.
+```bash
+curl http://localhost:8000/v1/chat/completions ^
+  -H "Content-Type: application/json" ^
+  -H "X-Consumer-ID: equipo_desarrollo" ^
+  -d "{\"model\":\"auto\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}]}"
+```
 
-### 📈 4. El Narrador (Dashboard FinOps) -> Asignado a: Jose Antonio Ponce Cerón
-**Objetivo:** Dar visibilidad a los gastos y justificar el ahorro para la demo.
-* **Stack:** Python + Streamlit.
-* **Archivo:** `dashboard/app.py`
-* **Tareas:**
-  * Leer directamente de la base de datos local SQLite.
-  * Mostrar gráficos del gasto actual vs. presupuesto.
-  * Mostrar métricas del ahorro conseguido gracias al "Cerebro".
+## Development
 
----
+Run the tests with:
 
-## 🛠️ Instrucciones de Arranque
+```bash
+pytest
+```
 
-1. Clonar este repositorio.
-2. Crear un entorno virtual: `python -m venv venv` (Mac/Linux) o `python -m venv venv` (Windows).
-3. Activar el entorno: `source venv/bin/activate` (Mac/Linux) o `venv\Scripts\activate` (Windows).
-4. Instalar dependencias (cuando existan en el `requirements.txt`).
-5. Trabajar en ramas separadas: `git checkout -b feature-[tu-rol]`.
+Local secrets belong in `.env`, which is ignored by Git. Use `.env.example` as
+the safe template. Do not commit API keys, database files, virtual
+environments, IDE settings, logs, or cache directories.
+
+See [`INSTRUCCIONES.md`](INSTRUCCIONES.md) and [`CHALLENGE.md`](CHALLENGE.md)
+for the starter-kit documentation and the complete challenge specification.

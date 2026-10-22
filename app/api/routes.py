@@ -42,13 +42,13 @@ async def chat_completions(
 
     has_budget, consumer_data = check_budget(x_consumer_id)
     if not has_budget:
-        mensaje_bloqueo = f"¡BLOQUEO! El equipo '{x_consumer_id}' agotó su presupuesto de ${consumer_data['budget_limit']}."
+        mensaje_bloqueo = f"BLOCKED: Team '{x_consumer_id}' has exhausted its ${consumer_data['budget_limit']} budget."
         log_alert(x_consumer_id, mensaje_bloqueo)
         raise HTTPException(status_code=402, detail="Presupuesto agotado")
 
     porcentaje_gastado = (consumer_data["current_spend"] / consumer_data["budget_limit"]) * 100
     if porcentaje_gastado >= 80.0:
-        mensaje_alerta = f"¡ATENCIÓN! Equipo '{x_consumer_id}' al {porcentaje_gastado:.2f}% de consumo."
+        mensaje_alerta = f"WARNING: Team '{x_consumer_id}' is at {porcentaje_gastado:.2f}% of its budget."
         log_alert(x_consumer_id, mensaje_alerta)
 
     modelo_solicitado = request.model
@@ -70,7 +70,7 @@ async def chat_completions(
             coste_ahorrado = (p_tokens_est * info_orig["precio_in"] / 1_000_000) + (c_tokens_est * info_orig["precio_out"] / 1_000_000)
 
         latency_ms = round((time.time() - start_time) * 1000, 2)
-        log_usage(x_consumer_id, modelo_solicitado, "caché", 0, 0, 0.0, "Caché Semántica", coste_ahorrado, latency_ms)
+        log_usage(x_consumer_id, modelo_solicitado, "cache", 0, 0, 0.0, "Semantic cache", coste_ahorrado, latency_ms)
         return _construir_respuesta_cache(modelo_original_cacheado, texto_cacheado, p_tokens=0, c_tokens=0)
 
     mensajes_completos = [{"role": msg.role, "content": msg.content} for msg in request.messages]
@@ -105,7 +105,7 @@ async def chat_completions(
         coste_solicitado = (p_tokens_teoricos * info_base["precio_in"] / 1_000_000) + (c_tokens_teoricos * info_base["precio_out"] / 1_000_000)
 
     savings = max(0.0, coste_solicitado - coste_total)
-    applied_rule = metadata.get("rule", "Ninguna")
+    applied_rule = metadata.get("rule", "None")
 
     llm_latency_ms = metadata.get("llm_latency_ms", 0.0)
     latency_ms = round(max(0.01, ((time.time() - start_time) * 1000) - llm_latency_ms), 2)

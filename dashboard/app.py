@@ -154,7 +154,7 @@ def get_connection():
         conn = sqlite3.connect(DB_PATH)
         return conn
     except Exception as e:
-        st.error(f"Error conectando a la base de datos: {e}")
+        st.error(f"Database connection error: {e}")
         return None
 
 # --- Obtención de Datos ---
@@ -164,7 +164,7 @@ if conn:
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='consumers'")
     if not cursor.fetchone():
-        st.warning("⚠️ La base de datos aún no ha sido inicializada por el backend. Ejecuta el proxy primero.")
+        st.warning("⚠️ The database has not been initialized by the backend yet. Start the proxy first.")
         st.stop()
         
     df_consumers = pd.read_sql_query("SELECT id, name as nombre, budget_limit as presupuesto_maximo, current_spend as gasto_actual FROM consumers", conn)
@@ -179,7 +179,7 @@ if conn:
             prompt_tokens, 
             completion_tokens, 
             total_cost as coste_total, 
-            IFNULL(applied_rule, 'Ninguna') as regla_aplicada,
+            IFNULL(applied_rule, 'None') as regla_aplicada,
             IFNULL(savings, 0.0) as ahorro_generado,
             IFNULL(latency_ms, 0.0) as latency_ms,
             timestamp
@@ -227,7 +227,7 @@ if conn:
                 df_logs['regla_aplicada'] = df_logs[c]
                 break
         if 'regla_aplicada' not in df_logs.columns:
-            df_logs['regla_aplicada'] = 'Ninguna'
+            df_logs['regla_aplicada'] = 'None'
 
         # Ahorro generado
         ahorro_cols = ['ahorro_generado']
@@ -249,15 +249,15 @@ if conn:
 else:
     st.stop()
 
-# --- Cálculos Globales ---
+# --- Global calculations ---
 gasto_total = df_consumers["gasto_actual"].sum()
 presupuesto_total = df_consumers["presupuesto_maximo"].sum()
 ahorro_total = df_logs["ahorro_generado"].sum() if 'ahorro_generado' in df_logs.columns else 0.0
 ahorro_pct_medio = df_logs["savings_pct"].mean() if 'savings_pct' in df_logs.columns and not df_logs.empty else 0.0
-peticiones_optimizadas = len(df_logs[df_logs["regla_aplicada"] != "Ninguna"]) if 'regla_aplicada' in df_logs.columns else 0
+peticiones_optimizadas = len(df_logs[df_logs["regla_aplicada"] != "None"]) if 'regla_aplicada' in df_logs.columns else 0
 
 # --- Layout del Dashboard ---
-st.markdown("<p class='header-subtitle' style='margin-top: -1rem; margin-bottom: 2rem; font-size: 1.6rem; font-weight: 500;'>Control de Gastos, Optimización y Gobernanza de IA Generativa</p>", unsafe_allow_html=True)
+st.markdown("<p class='header-subtitle' style='margin-top: -1rem; margin-bottom: 2rem; font-size: 1.6rem; font-weight: 500;'>Generative AI Cost Control, Optimization, and Governance</p>", unsafe_allow_html=True)
 
 # 1. Tarjetas de Métricas Superiores
 col1, col2, col3 = st.columns(3)
@@ -266,7 +266,7 @@ with col1:
     st.markdown(f'''
         <div class="metric-card">
             <div class="metric-value">${gasto_total:.2f}</div>
-            <div class="metric-label">Gasto Total Acumulado</div>
+            <div class="metric-label">Total Accumulated Spend</div>
         </div>
     ''', unsafe_allow_html=True)
 
@@ -274,7 +274,7 @@ with col2:
     st.markdown(f'''
         <div class="metric-card">
             <div class="metric-value">${presupuesto_total:.2f}</div>
-            <div class="metric-label">Presupuesto Global</div>
+            <div class="metric-label">Global Budget</div>
         </div>
     ''', unsafe_allow_html=True)
 
@@ -282,17 +282,17 @@ with col3:
     st.markdown(f'''
         <div class="metric-card">
             <div class="metric-value savings-value">${ahorro_total:.4f}</div>
-            <div class="metric-label">Ahorro Generado ({peticiones_optimizadas} peticiones)</div>
+            <div class="metric-label">Generated Savings ({peticiones_optimizadas} requests)</div>
         </div>
     ''', unsafe_allow_html=True)
 
 st.write("---")
 
 # TABS PRINCIPALES
-tab1, tab2, tab3, tab4 = st.tabs(["VISIÓN GENERAL", "PREDICCIONES DE GASTO", "AUDITORÍA E IMPACTO", "ALERTAS FINOPS"])
+tab1, tab2, tab3, tab4 = st.tabs(["OVERVIEW", "COST FORECASTS", "AUDIT AND IMPACT", "FINOPS ALERTS"])
 
 with tab1:
-    st.subheader("Control de Presupuesto por Equipo")
+    st.subheader("Budget Control by Team")
     cols = st.columns(len(df_consumers) if not df_consumers.empty else 1)
     
     for idx, row in df_consumers.iterrows():
@@ -321,31 +321,31 @@ with tab1:
             st.plotly_chart(fig, use_container_width=True)
             
     st.write("---")
-    st.subheader("Análisis de peticiones")
+    st.subheader("Request Analysis")
     col_chart1, col_chart2 = st.columns(2)
     
     with col_chart1:
         if not df_logs.empty:
             df_modelo = df_logs.groupby("modelo_usado").size().reset_index(name="peticiones")
-            fig_pie = px.pie(df_modelo, values='peticiones', names='modelo_usado', title='Peticiones por Modelo Usado',
+            fig_pie = px.pie(df_modelo, values='peticiones', names='modelo_usado', title='Requests by Model',
                              color_discrete_sequence=px.colors.qualitative.Pastel)
             fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig_pie, use_container_width=True)
         else:
-            st.info("No hay datos de logs registrados aún.")
+            st.info("No log data has been recorded yet.")
             
     with col_chart2:
         if not df_logs.empty:
             df_costes = df_logs[~df_logs["modelo_usado"].str.contains("Caché|Cache", case=False, na=False)].groupby("modelo_usado")["coste_total"].sum().reset_index()
-            fig_bar = px.bar(df_costes, x='modelo_usado', y='coste_total', title='Coste Total por Modelo ($)',
+            fig_bar = px.bar(df_costes, x='modelo_usado', y='coste_total', title='Total Cost by Model ($)',
                              color='modelo_usado', text_auto='.4f')
             fig_bar.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                                  xaxis_title="Modelo", yaxis_title="Coste ($)")
+                                  xaxis_title="Model", yaxis_title="Cost ($)")
             st.plotly_chart(fig_bar, use_container_width=True)
 
 with tab2:
-    st.subheader("Predicción de Gasto a 3 Días")
-    st.markdown("Proyección del gasto basada en el uso histórico de los últimos 7 días mediante regresión lineal.")
+    st.subheader("Three-Day Cost Forecast")
+    st.markdown("Cost projection based on the last seven days of historical usage using linear regression.")
     
     if not df_logs.empty:
         # Agrupar costes por fecha (día) y acumulado
@@ -430,12 +430,12 @@ with tab2:
             
             st.plotly_chart(fig_trend, use_container_width=True)
         else:
-            st.warning("No hay suficientes días de datos para calcular una tendencia.")
+            st.warning("There are not enough days of data to calculate a trend.")
     else:
         st.info("No hay datos para mostrar.")
         
 with tab3:
-    st.subheader("Impacto de Reglas de Optimización")
+    st.subheader("Optimization Rule Impact")
     ahorro_col1, ahorro_col2 = st.columns(2)
     with ahorro_col1:
         st.markdown(
@@ -459,7 +459,7 @@ with tab3:
         )
 
     if not df_logs.empty and 'regla_aplicada' in df_logs.columns:
-        df_rules = df_logs[~df_logs['regla_aplicada'].isin(['Ninguna', 'Elección Inicial Óptima', 'Elección Explícita Respetada', 'Enrutamiento Automático (Nivel 2)'])]
+        df_rules = df_logs[~df_logs['regla_aplicada'].isin(['None', 'Initial Optimal Choice', 'Explicit Choice Respected', 'Automatic Routing (Level 2)'])]
         if not df_rules.empty:
             df_rules = df_rules.copy()
             df_rules['coste_referencia'] = df_rules['coste_total'] + df_rules['ahorro_generado']
@@ -480,16 +480,16 @@ with tab3:
             )
 
             fig_rules = px.bar(df_ahorro_por_regla, x='ahorro_generado', y='regla_aplicada', orientation='h',
-                               title="Ahorro Generado por Regla de Enrutamiento ($)",
+                               title="Savings by Routing Rule ($)",
                                color='regla_aplicada', text_auto='.4f')
             fig_rules.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                                   xaxis_title="Ahorro ($)", yaxis_title="Regla")
             st.plotly_chart(fig_rules, use_container_width=True)
         else:
-            st.info("No se han activado reglas de optimización todavía.")
+            st.info("No optimization rules have been triggered yet.")
             
     st.write("---")
-    st.subheader("🧾 Últimas Peticiones (Registro de Auditoría)")
+    st.subheader("🧾 Recent Requests (Audit Log)")
     if not df_logs.empty:
         # Formatear la tabla para mostrar mejor
         df_display = df_logs.sort_values(by="timestamp", ascending=False).head(20).drop(columns=['model_used', 'fecha'], errors='ignore')
@@ -509,7 +509,7 @@ with tab3:
         )
 
 with tab4:
-    st.subheader("Registro Histórico de Alertas")
+    st.subheader("Alert History")
     if not df_alerts.empty:
         st.dataframe(
             df_alerts, 

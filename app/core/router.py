@@ -8,13 +8,13 @@ import uuid
 import httpx
 
 # =====================================================================
-# CATÁLOGO ESCALABLE DE MODELOS
+# SCALABLE MODEL CATALOG
 # =====================================================================
 REGISTRO_MODELOS = {
     "llama3.2:3b": {
         "proveedor": "provider-a",
         "url": os.getenv("AI_FINOPS_PROVIDER_A_URL", "http://localhost:11434/v1/chat/completions"),
-        "nivel_exigencia": 1,      # Nivel 1: Para peticiones estándar o incompletas
+        "nivel_exigencia": 1,      # Level 1: Standard or incomplete requests
         "precio_in": 0.06,
         "precio_out": 0.06,
         "factor_eficiencia": 0.82
@@ -32,16 +32,16 @@ REGISTRO_MODELOS = {
 logger = logging.getLogger(__name__)
 
 # =====================================================================
-# DICCIONARIO SEMÁNTICO
+# SEMANTIC DICTIONARY
 # =====================================================================
 PALABRAS_COMPLEJAS = {
-    # 1. Lenguajes de Programación y Tecnologías
+    # 1. Programming Languages and Technologies
     "python", "javascript", "java", "c++", "c#", "sql", "html", "css", "php",
     "ruby", "swift", "golang", "rust", "bash", "shell", "powershell", "typescript",
     "docker", "kubernetes", "git", "linux", "aws", "azure", "gcp", "terraform",
     "kotlin", "scala", "dart", "perl", "haskell", "lua", "matlab", "r",
 
-    # 2. Conceptos de Desarrollo y Arquitectura
+    # 2. Development and Architecture Concepts
     "api", "rest", "graphql", "json", "xml", "yaml", "regex", "debug", "refactoriza",
     "compila", "despliegue", "frontend", "backend", "query", "consulta", "algoritmo",
     "bucle", "funcion", "clase", "objeto", "asincrono", "framework", "react",
@@ -50,25 +50,25 @@ PALABRAS_COMPLEJAS = {
     "script", "código", "programar", "variable", "repositorio", "commit", "merge",
     "pipeline", "ci/cd", "testing", "unitario", "mock", "middleware", "endpoint",
 
-    # 3. Datos, Bases de Datos y Formatos
+    # 3. Data, Databases, and Formats
     "csv", "excel", "pandas", "dataframe", "scraping", "parsear", "extraer",
     "transformar", "etl", "dashboard", "grafica", "visualizacion", "dataset",
     "mysql", "postgres", "mongodb", "nosql", "redis", "elasticsearch", "supabase",
     "oracle", "sqlite", "cassandra", "hadoop", "spark", "kafka", "parquet",
 
-    # 4. Data Science, IA y Machine Learning
+    # 4. Data Science, AI, and Machine Learning
     "machine", "learning", "ia", "deep", "redes", "neuronales", "nlp", "vision",
     "entrenamiento", "prediccion", "clustering", "regresion", "clasificacion",
     "tensor", "pytorch", "scikit", "llm", "prompt", "token", "embedding",
 
-    # 5. Razonamiento, Lógica y Matemáticas
+    # 5. Reasoning, Logic, and Mathematics
     "analiza", "evalua", "compara", "deduce", "justifica", "optimiza", "abstraccion",
     "inferencia", "estadistica", "probabilidad", "matematicas", "calculo", "ecuacion",
     "integral", "derivada", "matriz", "algebra", "fisica", "teoria", "teorema",
     "demuestra", "logica", "hipotesis", "complejidad", "heuristica", "trigonometria",
     "geometria", "aritmetica", "proporcion", "varianza", "distribucion",
 
-    # 6. Documentación Profesional, Legal y Corporativa
+    # 6. Professional, Legal, and Corporate Documentation
     "ensayo", "tesis", "informe", "contrato", "legal", "clausula", "patente",
     "cientifico", "paper", "metodologia", "bibliografia", "citacion", "apa",
     "normativa", "cumplimiento", "auditoria", "vulnerabilidad", "ciberseguridad",
@@ -177,9 +177,9 @@ def _seleccionar_mejor_modelo(nivel_requerido: int, modelo_solicitado: str) -> t
         modelo_ideal = min(modelos_validos.items(), key=lambda x: x[1]["precio_in"] + x[1]["precio_out"])[0]
 
     if modelo_solicitado and modelo_solicitado in REGISTRO_MODELOS:
-        return modelo_solicitado, "Elección Explícita Respetada"
+        return modelo_solicitado, "Explicit Choice Respected"
 
-    return modelo_ideal, f"Enrutamiento Automático (Nivel {nivel_requerido})"
+    return modelo_ideal, f"Automatic Routing (Level {nivel_requerido})"
 
 async def enrutar_peticion(prompt: str, porcentaje_presupuesto_gastado: float, mensajes_completos: list, modelo_solicitado: str) -> tuple[dict, dict]:
     
@@ -195,7 +195,7 @@ async def enrutar_peticion(prompt: str, porcentaje_presupuesto_gastado: float, m
 
     if porcentaje_presupuesto_gastado >= 90.0:
         modelo_elegido = min(REGISTRO_MODELOS.items(), key=lambda x: x[1]["precio_in"] + x[1]["precio_out"])[0]
-        regla_aplicada = "Degradación FinOps (Presupuesto >90%)"
+        regla_aplicada = "FinOps degradation (Budget >90%)"
 
     url_destino = REGISTRO_MODELOS[modelo_elegido]["url"]
     metadata = {"rule": regla_aplicada, "provider": REGISTRO_MODELOS[modelo_elegido]["proveedor"]}
@@ -231,6 +231,6 @@ async def enrutar_peticion(prompt: str, porcentaje_presupuesto_gastado: float, m
             return resp_json, metadata
         
     except httpx.HTTPStatusError as e:
-        return {"error": "Error interno del proveedor de IA", "detalles": str(e)}, metadata
+        return {"error": "Internal AI provider error", "details": str(e)}, metadata
     except httpx.RequestError as e:
-        return {"error": "No se pudo establecer conexión con el motor de IA", "detalles": str(e)}, metadata
+        return {"error": "Could not connect to the AI engine", "details": str(e)}, metadata
