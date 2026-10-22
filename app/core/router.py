@@ -4,9 +4,8 @@ import logging
 import re
 import unicodedata
 import time
-
+import uuid
 import httpx
-from deep_translator import GoogleTranslator
 
 # =====================================================================
 # CATÁLOGO ESCALABLE DE MODELOS
@@ -36,44 +35,44 @@ logger = logging.getLogger(__name__)
 # DICCIONARIO SEMÁNTICO
 # =====================================================================
 PALABRAS_COMPLEJAS = {
-    # 1. Programming Languages and Technologies
+    # 1. Lenguajes de Programación y Tecnologías
     "python", "javascript", "java", "c++", "c#", "sql", "html", "css", "php",
     "ruby", "swift", "golang", "rust", "bash", "shell", "powershell", "typescript",
     "docker", "kubernetes", "git", "linux", "aws", "azure", "gcp", "terraform",
     "kotlin", "scala", "dart", "perl", "haskell", "lua", "matlab", "r",
 
-    # 2. Development and Architecture Concepts
-    "api", "rest", "graphql", "json", "xml", "yaml", "regex", "debug", "refactor",
-    "compile", "deployment", "frontend", "backend", "query", "algorithm",
-    "loop", "function", "class", "object", "asynchronous", "framework", "react",
+    # 2. Conceptos de Desarrollo y Arquitectura
+    "api", "rest", "graphql", "json", "xml", "yaml", "regex", "debug", "refactoriza",
+    "compila", "despliegue", "frontend", "backend", "query", "consulta", "algoritmo",
+    "bucle", "funcion", "clase", "objeto", "asincrono", "framework", "react",
     "angular", "vue", "django", "flask", "fastapi", "node", "express", "spring",
-    "architecture", "scalability", "performance", "microservices", "pattern",
-    "script", "code", "program", "variable", "repository", "commit", "merge",
-    "pipeline", "ci/cd", "testing", "unit", "mock", "middleware", "endpoint",
+    "arquitectura", "escalabilidad", "rendimiento", "microservicios", "patrón",
+    "script", "código", "programar", "variable", "repositorio", "commit", "merge",
+    "pipeline", "ci/cd", "testing", "unitario", "mock", "middleware", "endpoint",
 
-    # 3. Data, Databases and Formats
-    "csv", "excel", "pandas", "dataframe", "scraping", "parse", "extract",
-    "transform", "etl", "dashboard", "chart", "visualization", "dataset",
+    # 3. Datos, Bases de Datos y Formatos
+    "csv", "excel", "pandas", "dataframe", "scraping", "parsear", "extraer",
+    "transformar", "etl", "dashboard", "grafica", "visualizacion", "dataset",
     "mysql", "postgres", "mongodb", "nosql", "redis", "elasticsearch", "supabase",
     "oracle", "sqlite", "cassandra", "hadoop", "spark", "kafka", "parquet",
 
-    # 4. Data Science, AI and Machine Learning
-    "machine", "learning", "ai", "deep", "networks", "neural", "nlp", "vision",
-    "training", "prediction", "clustering", "regression", "classification",
+    # 4. Data Science, IA y Machine Learning
+    "machine", "learning", "ia", "deep", "redes", "neuronales", "nlp", "vision",
+    "entrenamiento", "prediccion", "clustering", "regresion", "clasificacion",
     "tensor", "pytorch", "scikit", "llm", "prompt", "token", "embedding",
 
-    # 5. Reasoning, Logic and Mathematics
-    "analyze", "evaluate", "compare", "deduce", "justify", "optimize", "abstraction",
-    "inference", "statistics", "probability", "mathematics", "calculus", "equation",
-    "integral", "derivative", "matrix", "algebra", "physics", "theory", "theorem",
-    "prove", "logic", "hypothesis", "complexity", "heuristic", "trigonometry",
-    "geometry", "arithmetic", "proportion", "variance", "distribution",
+    # 5. Razonamiento, Lógica y Matemáticas
+    "analiza", "evalua", "compara", "deduce", "justifica", "optimiza", "abstraccion",
+    "inferencia", "estadistica", "probabilidad", "matematicas", "calculo", "ecuacion",
+    "integral", "derivada", "matriz", "algebra", "fisica", "teoria", "teorema",
+    "demuestra", "logica", "hipotesis", "complejidad", "heuristica", "trigonometria",
+    "geometria", "aritmetica", "proporcion", "varianza", "distribucion",
 
-    # 6. Professional, Legal and Corporate Documentation
-    "essay", "thesis", "report", "contract", "legal", "clause", "patent",
-    "scientific", "paper", "methodology", "bibliography", "citation", "apa",
-    "regulation", "compliance", "audit", "vulnerability", "cybersecurity",
-    "gdpr", "cryptography", "encryption", "strategic", "financial", "balance"
+    # 6. Documentación Profesional, Legal y Corporativa
+    "ensayo", "tesis", "informe", "contrato", "legal", "clausula", "patente",
+    "cientifico", "paper", "metodologia", "bibliografia", "citacion", "apa",
+    "normativa", "cumplimiento", "auditoria", "vulnerabilidad", "ciberseguridad",
+    "gdpr", "criptografia", "encriptacion", "estrategico", "financiero", "balance"
 }
 
 def _normalizar_texto(texto: str) -> str:
@@ -97,27 +96,69 @@ def comprimir_prompt(texto: str) -> str:
     # 3. Quitar espacios y saltos sobrantes al principio y al final
     return texto_limpio.strip()
 
+def deshidratar_prompt(prompt: str) -> tuple[str, dict]:
+    """
+    Sustituye datos sensibles por tokens opacos aleatorios (UUIDs).
+    Devuelve el prompt anonimizado y el mapa de rehidratación privada.
+    """
+    if not prompt:
+        return "", {}
+    
+    mapa_rehidratacion = {}
+    prompt_filtrado = prompt
+
+    # 1. Regex para Correos Electrónicos
+    regex_email = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+    correos = re.findall(regex_email, prompt_filtrado)
+    for correo in correos:
+        token_falso = f"[EMAIL_{uuid.uuid4().hex[:6].upper()}]"
+        mapa_rehidratacion[token_falso] = correo
+        prompt_filtrado = prompt_filtrado.replace(correo, token_falso)
+
+    # 2. Regex para IDs de Empleado (ej: c1234567)
+    regex_empleado = r'\b[cmCM]\d{7}\b'
+    empleados = re.findall(regex_empleado, prompt_filtrado)
+    for emp in empleados:
+        token_falso = f"[EMP_{uuid.uuid4().hex[:6].upper()}]"
+        mapa_rehidratacion[token_falso] = emp
+        prompt_filtrado = prompt_filtrado.replace(emp, token_falso)
+
+    # 3. Regex para VINs de Mercedes-Benz (17 caracteres)
+    regex_vin = r'\b[A-HJ-NPR-Z0-9]{17}\b'
+    vins = re.findall(regex_vin, prompt_filtrado)
+    for vin in vins:
+        token_falso = f"[VIN_{uuid.uuid4().hex[:6].upper()}]"
+        mapa_rehidratacion[token_falso] = vin
+        prompt_filtrado = prompt_filtrado.replace(vin, token_falso)
+
+    return prompt_filtrado, mapa_rehidratacion
+
+
+def rehidratar_respuesta(texto_ia: str, mapa_rehidratacion: dict) -> str:
+    """
+    Restaura los datos sensibles reales en la respuesta final que lee el usuario.
+    """
+    if not texto_ia or not mapa_rehidratacion:
+        return texto_ia
+    
+    texto_final = texto_ia
+    # Recorremos el mapa privado y cambiamos los tokens falsos por el valor real
+    for token_falso, valor_real in mapa_rehidratacion.items():
+        texto_final = texto_final.replace(token_falso, valor_real)
+        
+    return texto_final
+
 def evaluar_complejidad(prompt: str) -> int:
     """
     Asigna el Nivel de Exigencia:
     - Nivel 2 (Mistral): DEBE tener palabras clave Y más de 400 caracteres.
     - Nivel 1 (Llama): Cualquier otra cosa (falla en uno o ambos requisitos).
     """
-    try:
-        texto_a_traducir = prompt[:4500] if len(prompt) > 4500 else prompt
-        if texto_a_traducir.strip():
-            prompt_en = GoogleTranslator(source='auto', target='en').translate(texto_a_traducir)
-        else:
-            prompt_en = prompt
-    except Exception as e:
-        logger.error(f"Error translating prompt: {e}")
-        prompt_en = prompt
-
-    prompt_normalizado = _normalizar_texto(prompt_en)
+    prompt_normalizado = _normalizar_texto(prompt)
     palabras_prompt_actual = set(re.findall(r'\b\w+\b', prompt_normalizado))
 
     tiene_palabras_complejas = bool(palabras_prompt_actual.intersection(PALABRAS_COMPLEJAS))
-    es_largo = len(prompt) > 400
+    es_largo = len(prompt_normalizado) > 400
 
     if tiene_palabras_complejas and es_largo:
         return 2  # Pasa al resto (Mistral)
@@ -144,10 +185,12 @@ async def enrutar_peticion(prompt: str, porcentaje_presupuesto_gastado: float, m
     
     prompt_optimizado = comprimir_prompt(prompt)
 
+    prompt_seguro, mapa_privado = deshidratar_prompt(prompt_optimizado)
+
     if mensajes_completos and mensajes_completos[-1]["role"] == "user":
-        mensajes_completos[-1]["content"] = prompt_optimizado
+        mensajes_completos[-1]["content"] = prompt_seguro
     
-    nivel_requerido = evaluar_complejidad(prompt_optimizado)
+    nivel_requerido = evaluar_complejidad(prompt_seguro)
     modelo_elegido, regla_aplicada = _seleccionar_mejor_modelo(nivel_requerido, modelo_solicitado)
 
     if porcentaje_presupuesto_gastado >= 90.0:
@@ -170,9 +213,23 @@ async def enrutar_peticion(prompt: str, porcentaje_presupuesto_gastado: float, m
             metadata["llm_latency_ms"] = (time.time() - t0_http) * 1000
             respuesta.raise_for_status()
             resp_json = respuesta.json()
+
+            try:
+                # Extraemos el texto que ha redactado la IA con los tokens ficticios
+                texto_ia = resp_json["choices"][0]["message"]["content"]
+                
+                # Interceptamos y cambiamos los tokens efímeros por los datos reales del mapa privado
+                texto_rehidratado = rehidratar_respuesta(texto_ia, mapa_privado)
+                
+                # Guardamos el texto real final en el JSON de respuesta para el usuario
+                resp_json["choices"][0]["message"]["content"] = texto_rehidratado
+            except (KeyError, IndexError):
+                pass
+            
             if isinstance(resp_json, dict) and "model" not in resp_json:
                 resp_json["model"] = modelo_elegido
             return resp_json, metadata
+        
     except httpx.HTTPStatusError as e:
         return {"error": "Error interno del proveedor de IA", "detalles": str(e)}, metadata
     except httpx.RequestError as e:

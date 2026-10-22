@@ -28,6 +28,7 @@ venv/
 .venv/
 env/
 .env_python/
+v/
 
 # ========================
 # Archivos de SO (Mac / Windows)
