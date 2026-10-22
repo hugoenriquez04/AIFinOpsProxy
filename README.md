@@ -4,6 +4,13 @@ AI FinOps Proxy is an OpenAI-compatible gateway that intercepts AI requests,
 tracks token usage and cost, enforces per-consumer budgets, and routes requests
 to the most appropriate local model.
 
+## Participants
+
+- Hugo Enríquez Jiménez
+- Javier Campos Córcoles
+- Juan Manuel Díaz Guardia
+- Jose Antonio Ponce Cerón
+
 ## Architecture
 
 - **Core proxy:** FastAPI endpoint in `app/main.py` and `app/api/routes.py`.
